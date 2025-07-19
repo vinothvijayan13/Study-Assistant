@@ -46,7 +46,20 @@ export const downloadPDF = async ({ title, content, type }: PDFContent) => {
       checkNewPage(50);
 
       // File name header
-      addWrappedText(`File: ${analysis.fileName || analysis.mainTopic || `Analysis ${index + 1}`}`, margin, 16, 'bold');
+      addWrappedText(`Analysis: ${analysis.fileName || analysis.mainTopic || `Study Material ${index + 1}`}`, margin, 16, 'bold');
+      
+      // Add metadata if available
+      if (analysis.language || analysis.createdAt) {
+        let metaInfo = '';
+        if (analysis.language) metaInfo += `Language: ${analysis.language === 'tamil' ? 'தமிழ்' : 'English'}`;
+        if (analysis.createdAt) {
+          const date = new Date(analysis.createdAt).toLocaleDateString();
+          metaInfo += metaInfo ? ` | Created: ${date}` : `Created: ${date}`;
+        }
+        if (metaInfo) {
+          addWrappedText(metaInfo, margin, 10, 'italic');
+        }
+      }
 
       // Summary
       if (analysis.summary) {
@@ -146,17 +159,24 @@ export const downloadPDF = async ({ title, content, type }: PDFContent) => {
     
     // Quiz Summary
     addWrappedText(`Quiz Results Summary`, margin, 18, 'bold');
-    addWrappedText(`Score: ${result.score}/${result.totalQuestions} (${result.percentage}%)`, margin, 14, 'bold');
-    addWrappedText(`Difficulty Level: ${result.difficulty || 'Medium'}`, margin, 12, 'normal');
+    addWrappedText(`Score: ${result.score || 0}/${result.totalQuestions || result.questionsData?.length || 0} (${result.percentage || 0}%)`, margin, 14, 'bold');
+    addWrappedText(`Difficulty Level: ${(result.difficulty || 'Medium').toUpperCase()}`, margin, 12, 'normal');
     addWrappedText(`Date: ${new Date().toLocaleDateString()}`, margin, 12, 'normal');
+    
+    if (result.completedAt) {
+      const completedDate = new Date(result.completedAt).toLocaleString();
+      addWrappedText(`Completed: ${completedDate}`, margin, 12, 'normal');
+    }
+    
     yPosition += 10;
 
     // Performance message
     let performanceMsg = "Good effort! Keep practicing.";
-    if (result.percentage >= 90) performanceMsg = "Outstanding performance! Excellent work!";
-    else if (result.percentage >= 80) performanceMsg = "Great job! You're well prepared!";
-    else if (result.percentage >= 70) performanceMsg = "Good work! Continue studying!";
-    else if (result.percentage >= 60) performanceMsg = "Fair performance. More practice needed.";
+    const percentage = result.percentage || 0;
+    if (percentage >= 90) performanceMsg = "Outstanding performance! Excellent work!";
+    else if (percentage >= 80) performanceMsg = "Great job! You're well prepared!";
+    else if (percentage >= 70) performanceMsg = "Good work! Continue studying!";
+    else if (percentage >= 60) performanceMsg = "Fair performance. More practice needed.";
     
     addWrappedText(performanceMsg, margin, 12, 'italic');
     yPosition += 10;
@@ -164,17 +184,21 @@ export const downloadPDF = async ({ title, content, type }: PDFContent) => {
     // Answer Review
     addWrappedText('Detailed Answer Review:', margin, 16, 'bold');
 
-    result.answers?.forEach((answer, index) => {
+    const answers = result.answers || [];
+    const questions = result.questionsData || result.questions || [];
+    
+    answers.forEach((answer, index) => {
       checkNewPage(60);
 
       const statusIcon = answer.isCorrect ? '✓' : '✗';
       const statusText = answer.isCorrect ? 'CORRECT' : 'INCORRECT';
       
       addWrappedText(`${statusIcon} Q${index + 1}: ${statusText}`, margin, 12, 'bold');
-      addWrappedText(answer.question.question, margin, 11, 'normal');
+      addWrappedText(answer.question?.question || questions[index]?.question || 'Question not available', margin, 11, 'normal');
 
-      if (answer.question.options && answer.question.options.length > 0) {
-        answer.question.options.forEach((option, optIndex) => {
+      const questionOptions = answer.question?.options || questions[index]?.options || [];
+      if (questionOptions.length > 0) {
+        questionOptions.forEach((option, optIndex) => {
           const optionLetter = String.fromCharCode(65 + optIndex);
           const isUserAnswer = answer.userAnswer === optionLetter || answer.userAnswer === option;
           const isCorrectAnswer = answer.correctAnswer === optionLetter || answer.correctAnswer === option;
@@ -194,8 +218,9 @@ export const downloadPDF = async ({ title, content, type }: PDFContent) => {
         addWrappedText(`Correct Answer: ${answer.correctAnswer}`, margin + 5, 11, 'bold');
       }
 
-      if (answer.question.explanation) {
-        addWrappedText(`Explanation: ${answer.question.explanation}`, margin + 5, 10, 'italic');
+      const explanation = answer.question?.explanation || questions[index]?.explanation;
+      if (explanation) {
+        addWrappedText(`Explanation: ${explanation}`, margin + 5, 10, 'italic');
       }
 
       yPosition += 10;

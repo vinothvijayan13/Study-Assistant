@@ -37,7 +37,7 @@ export interface StudyHistoryRecord {
 export const saveStudyHistory = async (
   userId: string,
   type: "analysis" | "quiz",
-  data: AnalysisResult[] | QuestionResult | any,
+  data: any,
   options: {
     fileName?: string;
     difficulty: string;
@@ -68,26 +68,30 @@ export const saveStudyHistory = async (
     let analysisData = null;
     let quizData = null;
 
-    if (type === "analysis" && Array.isArray(data)) {
-      // Store analysis data in a structured format
-      const analysis = data[0]; // Take first analysis result
+    if (type === "analysis") {
+      // Store analysis data in a compact structured format
       analysisData = {
-        keyPoints: analysis.keyPoints || [],
-        studyPoints: analysis.studyPoints || [],
-        summary: analysis.summary || '',
-        tnpscRelevance: analysis.tnpscRelevance || '',
-        tnpscCategories: analysis.tnpscCategories || [],
-        mainTopic: analysis.mainTopic || options.fileName || 'Study Material'
+        mainTopic: data.mainTopic || options.fileName || 'Study Material',
+        keyPoints: data.keyPoints || [],
+        studyPoints: data.studyPoints || [],
+        summary: data.summary || '',
+        tnpscRelevance: data.tnpscRelevance || '',
+        tnpscCategories: data.tnpscCategories || [],
+        language: data.language || options.language,
+        totalKeyPoints: data.totalKeyPoints || data.keyPoints?.length || 0,
+        totalStudyPoints: data.totalStudyPoints || data.studyPoints?.length || 0,
+        createdAt: new Date().toISOString()
       };
     } else if (type === "quiz") {
-      // Store quiz data with answers
+      // Store quiz data with answers in compact format
       quizData = {
-        questions: data.questions || [],
+        totalQuestions: data.questions?.length || options.totalQuestions || 0,
+        questionsData: data.questions || [], // Store full questions for download
         answers: options.quizAnswers || [],
         score: options.score || 0,
-        totalQuestions: options.totalQuestions || 0,
         percentage: options.percentage || 0,
-        difficulty: options.difficulty
+        difficulty: options.difficulty,
+        completedAt: new Date().toISOString()
       };
     }
 

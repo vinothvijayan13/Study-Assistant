@@ -54,11 +54,17 @@ const StudyHistory = () => {
 
       if (record.type === "quiz" && record.quizData) {
         title = `Quiz Results - ${dateString}`;
-        content = record.quizData;
+        content = {
+          ...record.quizData,
+          questions: record.quizData.questionsData || record.quizData.questions || []
+        };
         type = "quiz-results";
       } else if (record.type === "analysis" && record.analysisData) {
         title = `Study Analysis - ${dateString}`;
-        content = [record.analysisData];
+        content = [{
+          ...record.analysisData,
+          fileName: record.fileName || record.analysisData.mainTopic
+        }];
         type = "analysis";
       } else {
         // Fallback to original data structure
@@ -152,9 +158,15 @@ const StudyHistory = () => {
               </div>
               <div className="text-center p-3 bg-orange-50 rounded-lg">
                 <div className="text-2xl font-bold text-orange-600">
-                  {Math.round(studyHistory.filter(h => h.type === "quiz").reduce((acc, h) => 
-                    acc + (h.score || 0) / (h.totalQuestions || 1), 0
-                  ) / Math.max(studyHistory.filter(h => h.type === "quiz").length, 1) * 100) || 0}%
+                  {(() => {
+                    const quizRecords = studyHistory.filter(h => h.type === "quiz");
+                    if (quizRecords.length === 0) return 0;
+                    const totalPercentage = quizRecords.reduce((acc, h) => {
+                      const percentage = h.quizData?.percentage || h.percentage || 0;
+                      return acc + percentage;
+                    }, 0);
+                    return Math.round(totalPercentage / quizRecords.length);
+                  })()}%
                 </div>
                 <div className="text-sm text-orange-700">Avg Score</div>
               </div>
@@ -209,9 +221,22 @@ const StudyHistory = () => {
                       {record.type === "quiz" && record.score !== undefined && (
                         <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getScoreColor(record.score, record.totalQuestions || 1)}`}>
                           <Trophy className="h-4 w-4" />
-                          Score: {record.score}/{record.totalQuestions} ({Math.round((record.score / (record.totalQuestions || 1)) * 100)}%)
+                          Score: {record.quizData?.score || record.score}/{record.quizData?.totalQuestions || record.totalQuestions} 
+                          ({record.quizData?.percentage || Math.round(((record.score || 0) / (record.totalQuestions || 1)) * 100)}%)
                         </div>
                       )}
+
+                     {record.type === "analysis" && record.analysisData && (
+                       <div className="text-sm text-gray-600 mt-2">
+                         <div className="flex gap-4">
+                           <span>📝 {record.analysisData.totalKeyPoints || 0} Key Points</span>
+                           <span>📚 {record.analysisData.totalStudyPoints || 0} Study Points</span>
+                           {record.analysisData.tnpscCategories?.length > 0 && (
+                             <span>🎯 {record.analysisData.tnpscCategories.length} TNPSC Categories</span>
+                           )}
+                         </div>
+                       </div>
+                     )}
                     </div>
 
                     <div className="flex gap-2">

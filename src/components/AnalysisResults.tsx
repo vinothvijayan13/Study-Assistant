@@ -8,6 +8,7 @@ import { saveStudyHistory } from "@/services/studyHistoryService";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "@/config/firebase";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 interface AnalysisResultsProps {
   result: AnalysisResult;
@@ -29,24 +30,38 @@ const AnalysisResults = ({
   const [user] = useAuthState(auth);
 
   // Save to study history when component mounts
-  React.useEffect(() => {
+  useEffect(() => {
     const saveToHistory = async () => {
       if (user && result) {
         try {
+          // Create a compact analysis data structure
+          const compactAnalysisData = {
+            mainTopic: result.mainTopic || selectedFiles[0]?.name || "Study Material",
+            keyPoints: result.keyPoints || [],
+            studyPoints: result.studyPoints || [],
+            summary: result.summary || "",
+            tnpscRelevance: result.tnpscRelevance || "",
+            tnpscCategories: result.tnpscCategories || [],
+            language: result.language || "english",
+            totalKeyPoints: result.keyPoints?.length || 0,
+            totalStudyPoints: result.studyPoints?.length || 0
+          };
+
           await saveStudyHistory(
             user.uid,
             "analysis",
-            [result],
+            compactAnalysisData,
             {
               fileName: selectedFiles[0]?.name || "Study Material",
-              difficulty: "medium", // You can pass this as a prop
+              difficulty: "medium",
               language: result.language || "english",
               files: selectedFiles
             }
           );
-          console.log("Analysis saved to study history");
+          console.log("Detailed analysis saved to study history");
         } catch (error) {
           console.error("Failed to save to study history:", error);
+          // Don't show error toast to user as this is background operation
         }
       }
     };
